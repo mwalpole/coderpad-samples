@@ -42,6 +42,10 @@ LETTER_TO_INT_MAP = {
     "Y": 34,
     "Z": 35
 }
+RESULT_STR = {
+    True: "PASS",
+    False: "FAIL"
+}
 
 
 class FigiValidator:
@@ -51,7 +55,7 @@ class FigiValidator:
             "Provider": self.check_provider,
             "Is Global": self.check_is_global,
             "Associations": self.check_associations,
-            "Encoding": self.check_mod_10_dbl_add_dbl
+            "Encoding": self.check_encoding
         }
     
     def is_figi(self):
@@ -65,13 +69,16 @@ class FigiValidator:
         for check_name, func in self.active_checks.items():
             result = func()
             results.append(result)
-            print(f"{check_name} Passed: {result}")
+            print(f"{check_name:20}{RESULT_STR[result]:>6}")
         return results
 
-    def _do_mod_10_dbl_add_dbl(self, identifier):
+    @staticmethod
+    def do_mod_10_dbl_add_dbl(identifier):
         """
         Simple implementation of Mod 10 Double Add Double technique 
         described in https://www.omg.org/spec/FIGI/1.0/PDF, pp 16-17
+
+        Returns the check digit if valid, otherwise -1
         """
         nums = ""
         for n, char in enumerate(identifier[-2::-1], 1):
@@ -115,12 +122,12 @@ class FigiValidator:
         chars = self.identifier[3:11]
         return set(chars).issubset(ISO_8859_1_ALPHANUM)
 
-    def check_mod_10_dbl_add_dbl(self):
+    def check_encoding(self):
         """
         Character 12
         Check digit formula is based on the Modulus 10 Double Add Double technique and will be applied to every FIGI number.
         """
-        check_digit = self._do_mod_10_dbl_add_dbl(self.identifier)
+        check_digit = FigiValidator.do_mod_10_dbl_add_dbl(self.identifier)
         return int(self.identifier[-1]) == check_digit
 
 
