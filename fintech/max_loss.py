@@ -16,6 +16,7 @@ import pytest
 # * code the algo
 # * use pandas to create price diff product over all days and select peak
 
+
 def max_loss(prices):
     # careful of memory taking in a list
     max_price = 0
@@ -34,21 +35,21 @@ def max_loss(prices):
 
 
 def test_max_loss_a():
-    prices = [1,2,3,7,6,5,1,9,7,5,8]
+    prices = [1, 2, 3, 7, 6, 5, 1, 9, 7, 5, 8]
     out = max_loss(prices)
     assert out == 6
     print(out == 6)
 
 
 def test_max_loss_b():
-    prices = [1,9,6,7,6,5,7,2,5,8]
+    prices = [1, 9, 6, 7, 6, 5, 7, 2, 5, 8]
     out = max_loss(prices)
     assert out == 7
     print(out == 7)
 
 
 def test_negative_price():
-    prices = [1,-1]
+    prices = [1, -1]
     with pytest.raises(ValueError):
         assert max_loss(prices)
 

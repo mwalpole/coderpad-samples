@@ -14,11 +14,19 @@ Use the following references to understand more about FIGI and the validation ru
 
 """
 
-# Consider loading-parsing the docs outlined in the spec to test 
+# Consider loading-parsing the docs outlined in the spec to test
 
 ISO_8859_1_LETTERS = "BCDFGHJKLMNPQRSTVWXYZ"
 ISO_8859_1_ALPHANUM = ISO_8859_1_LETTERS + "0123456789"
-RESERVED_PROVIDERS = ("BS","BM","GG","GB","GH","KY","VG")  # to avoid conflict with ISIN country codes ending in "G"
+RESERVED_PROVIDERS = (
+    "BS",
+    "BM",
+    "GG",
+    "GB",
+    "GH",
+    "KY",
+    "VG",
+)  # to avoid conflict with ISIN country codes ending in "G"
 LETTER_TO_INT_MAP = {
     "B": 11,
     "C": 12,
@@ -34,40 +42,41 @@ LETTER_TO_INT_MAP = {
     "P": 25,
     "Q": 26,
     "R": 27,
-    "S": 28, 
+    "S": 28,
     "T": 29,
     "V": 31,
     "W": 32,
     "X": 33,
     "Y": 34,
-    "Z": 35
+    "Z": 35,
 }
-RESULT_STR = {
-    True: "PASS",
-    False: "FAIL"
-}
+RESULT_STR = {True: "PASS", False: "FAIL"}
 
 
 class FigiValidator:
-    def __init__(self, identifier):
-        self.identifier = identifier
-        self.active_checks = {
-            "Provider": self.check_provider,
-            "Is Global": self.check_is_global,
-            "Associations": self.check_associations,
-            "Encoding": self.check_encoding
-        }
-    
-    def is_figi(self):
-        print(f"ID: {self.identifier}")
-        out = all(self.run_active_checks())
-        print(F"ID is FIGI: {out}\n")
+    @classmethod
+    def is_figi(cls, identifier):
+        print(f"ID: {identifier}")
+        out = all(cls.run_active_checks(identifier))
+        print(f"ID is FIGI: {out}\n")
         return out
 
-    def run_active_checks(self):
+    @classmethod
+    def get_active_checks(cls):
+        active_checks = {
+            "Provider": cls.check_provider,
+            "Is Global": cls.check_is_global,
+            "Associations": cls.check_associations,
+            "Encoding": cls.check_encoding,
+        }
+        return active_checks
+
+    @classmethod
+    def run_active_checks(cls, identifier):
         results = []
-        for check_name, func in self.active_checks.items():
-            result = func()
+        active_checks = cls.get_active_checks()
+        for check_name, func in active_checks.items():
+            result = func(identifier)
             results.append(result)
             print(f"{check_name:20}{RESULT_STR[result]:>6}")
         return results
@@ -75,7 +84,7 @@ class FigiValidator:
     @staticmethod
     def do_mod_10_dbl_add_dbl(identifier):
         """
-        Simple implementation of Mod 10 Double Add Double technique 
+        Simple implementation of Mod 10 Double Add Double technique
         described in https://www.omg.org/spec/FIGI/1.0/PDF, pp 16-17
 
         Returns the check digit if valid, otherwise -1
@@ -98,68 +107,72 @@ class FigiValidator:
         check_digit = 10 - (result % 10)
         return check_digit
 
-    def check_provider(self):
+    @staticmethod
+    def check_provider(identifier):
         """
         Characters 1-2
         Designates the Certified Provider that issued (minted) the corresponding FIGI
         """
-        chars = self.identifier[:2]
+        chars = identifier[:2]
         return chars not in RESERVED_PROVIDERS
 
-    def check_is_global(self):
+    @staticmethod
+    def check_is_global(identifier):
         """
         Character 3
         Always 'G' to designate it as a Global Identifier
         """
-        chars = self.identifier[2]
+        chars = identifier[2]
         return chars == "G"
 
-    def check_associations(self):
+    @staticmethod
+    def check_associations(identifier):
         """
         Characters 4-11
         Randomly assigned values that complete the reference ID for the set of associated metadata. Alpha-numeric values allowed, excluding vowels.
         """
-        chars = self.identifier[3:11]
+        chars = identifier[3:11]
         return set(chars).issubset(ISO_8859_1_ALPHANUM)
 
-    def check_encoding(self):
+    @staticmethod
+    def check_encoding(identifier):
         """
         Character 12
         Check digit formula is based on the Modulus 10 Double Add Double technique and will be applied to every FIGI number.
         """
-        check_digit = FigiValidator.do_mod_10_dbl_add_dbl(self.identifier)
-        return int(self.identifier[-1]) == check_digit
+        check_digit = FigiValidator.do_mod_10_dbl_add_dbl(identifier)
+        return int(identifier[-1]) == check_digit
 
 
 def test_is_figi_1():
     "Validate if identifier conforms to FIGI standard"
     identifier = "BBG000BLNQ16"
-    assert FigiValidator(identifier).is_figi()
+    assert FigiValidator.is_figi(identifier)
 
 
 def test_is_figi_2():
     identifier = "NRG92C84SB39"
-    assert FigiValidator(identifier).is_figi()
+    assert FigiValidator.is_figi(identifier)
 
 
 def test_encoding_is_not_figi():
     identifier = "NRG92C84SB38"
-    assert not FigiValidator(identifier).is_figi()
+    assert not FigiValidator.is_figi(identifier)
 
 
 def test_associations_is_not_figi():
     identifier = "NRG92A84SB39"
-    assert not FigiValidator(identifier).is_figi()
+    assert not FigiValidator.is_figi(identifier)
 
 
 def test_global_character_is_not_figi():
     identifier = "NRC92C84SB39"
-    assert not FigiValidator(identifier).is_figi()
+    assert not FigiValidator.is_figi(identifier)
 
 
 def test_provider_is_not_figi():
     identifier = "GBG92C84SB39"
-    assert not FigiValidator(identifier).is_figi()
+    assert not FigiValidator.is_figi(identifier)
 
 
 test_is_figi_1()
